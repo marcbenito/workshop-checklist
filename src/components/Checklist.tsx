@@ -154,6 +154,11 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
                       </a>
                     )}
                   </div>
+                  {step.hint && (
+                    <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                      ✅ {step.hint}
+                    </p>
+                  )}
                 </div>
               </label>
             </li>
