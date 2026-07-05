@@ -11,6 +11,8 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Quan tot està llest es mostra el slider; permet tornar a veure els checks.
+  const [viewChecklist, setViewChecklist] = useState(false);
   const spendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Rehidratar l'estat des de la BD en muntar.
@@ -118,10 +120,23 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </header>
 
-      {allDone ? (
-        <SpendPanel value={spend} onChange={onSpendChange} />
+      {allDone && !viewChecklist ? (
+        <SpendPanel
+          value={spend}
+          onChange={onSpendChange}
+          onViewChecklist={() => setViewChecklist(true)}
+        />
       ) : (
-        <ul className="space-y-3">
+        <>
+          {allDone && (
+            <button
+              onClick={() => setViewChecklist(false)}
+              className="mb-4 text-sm font-medium text-[#C15F3C] underline underline-offset-2"
+            >
+              ← Torna a l&apos;ús de la IA
+            </button>
+          )}
+          <ul className="space-y-3">
           {STEPS.map((step) => {
             const checked = !!state[step.key];
             return (
@@ -183,7 +198,8 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </>
       )}
     </div>
   );
@@ -192,9 +208,11 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
 function SpendPanel({
   value,
   onChange,
+  onViewChecklist,
 }: {
   value: number;
   onChange: (v: number) => void;
+  onViewChecklist: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
@@ -222,6 +240,15 @@ function SpendPanel({
       <div className="mt-1 flex justify-between text-xs text-neutral-400">
         <span>1%</span>
         <span>100%</span>
+      </div>
+
+      <div className="mt-8 border-t border-neutral-200 pt-4 text-center dark:border-neutral-800">
+        <button
+          onClick={onViewChecklist}
+          className="text-sm font-medium text-[#C15F3C] underline underline-offset-2"
+        >
+          Torna a veure els checks d&apos;instal·lació
+        </button>
       </div>
     </div>
   );
