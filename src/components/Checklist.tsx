@@ -8,7 +8,7 @@ type StepsState = Record<string, boolean>;
 export function Checklist({ email, onReset }: { email: string; onReset: () => void }) {
   const [state, setState] = useState<StepsState>({});
   const [spend, setSpend] = useState<number>(0);
-  const [loginEmail, setLoginEmail] = useState<string>(email);
+  const [loginEmail, setLoginEmail] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
         if (active) {
           if (data.steps) setState(data.steps);
           if (typeof data.spend === "number") setSpend(data.spend);
-          if (data.loginEmail) setLoginEmail(data.loginEmail);
+          setLoginEmail(data.loginEmail ?? "");
         }
       } catch {
         if (active) setError("No s'ha pogut carregar el teu progrés.");
@@ -79,19 +79,6 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
         body: JSON.stringify({ email, spend: value }),
       }).catch(() => setError("No s'ha pogut desar l'ús de la IA."));
     }, 300);
-  }
-
-  async function saveLoginEmail(value: string) {
-    setLoginEmail(value);
-    try {
-      await fetch("/api/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, loginEmail: value }),
-      });
-    } catch {
-      setError("No s'ha pogut desar el correu de login.");
-    }
   }
 
   if (loading) {
@@ -152,7 +139,7 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
             </button>
           )}
 
-          <LoginEmailCard value={loginEmail} onSave={saveLoginEmail} />
+          <LoginEmailCard value={loginEmail} />
 
           <ul className="space-y-3">
           {STEPS.map((step) => {
@@ -213,7 +200,8 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
                     )}
                     {step.warnLogin && (
                       <p className="mt-2 rounded-md bg-amber-100 px-2 py-1.5 text-xs font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                        ⚠️ Fes login amb aquest correu: <strong>{loginEmail}</strong>
+                        ⚠️ Fes login amb aquest correu:{" "}
+                        <strong>{loginEmail || "no configurat"}</strong>
                       </p>
                     )}
                   </div>
@@ -277,63 +265,21 @@ function SpendPanel({
   );
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function LoginEmailCard({
-  value,
-  onSave,
-}: {
-  value: string;
-  onSave: (v: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value);
-
-  function commit() {
-    const clean = draft.trim().toLowerCase();
-    if (EMAIL_RE.test(clean)) {
-      onSave(clean);
-      setEditing(false);
-    }
-  }
-
+function LoginEmailCard({ value }: { value: string }) {
+  const configured = value.trim().length > 0;
   return (
     <div className="mb-6 rounded-2xl border-2 border-[#C15F3C]/40 bg-[#C15F3C]/5 p-5">
       <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
         📧 Correu per al login de Claude
       </p>
 
-      {editing ? (
-        <div className="mt-3 flex gap-2">
-          <input
-            type="email"
-            value={draft}
-            autoFocus
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && commit()}
-            className="flex-1 rounded-lg border border-neutral-300 bg-white px-3 py-2 text-lg outline-none focus:border-[#C15F3C] dark:border-neutral-700 dark:bg-neutral-900"
-          />
-          <button
-            onClick={commit}
-            className="rounded-lg bg-[#C15F3C] px-4 py-2 text-sm font-medium text-white hover:bg-[#a94f30]"
-          >
-            Desa
-          </button>
-        </div>
-      ) : (
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
+      <div className="mt-1">
+        {configured ? (
           <span className="break-all text-3xl font-bold text-[#C15F3C]">{value}</span>
-          <button
-            onClick={() => {
-              setDraft(value);
-              setEditing(true);
-            }}
-            className="text-sm text-neutral-500 underline underline-offset-2 hover:text-neutral-800"
-          >
-            editar
-          </button>
-        </div>
-      )}
+        ) : (
+          <span className="text-3xl font-bold text-neutral-400">no configurat</span>
+        )}
+      </div>
 
       <p className="mt-3 text-sm text-amber-800 dark:text-amber-300">
         ⚠️ Fes el login de <strong>Claude Code</strong> i <strong>Claude</strong> (claude.ai)

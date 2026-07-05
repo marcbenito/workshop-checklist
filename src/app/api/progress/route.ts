@@ -33,14 +33,14 @@ export async function GET(request: Request) {
   );
 
   if (rows.length === 0) {
-    // Encara no existeix: tot a false, gasto 0 i login_email = email per defecte.
+    // Encara no existeix: tot a false, gasto 0, sense login configurat.
     const empty = Object.fromEntries(COLUMNS.map((c) => [c, false]));
     return NextResponse.json({
       email,
       steps: empty,
       spend: 0,
       surveyDone: false,
-      loginEmail: email,
+      loginEmail: "",
     });
   }
 
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     steps,
     spend: spend_pct ?? 0,
     surveyDone: survey_done ?? false,
-    loginEmail: login_email || email,
+    loginEmail: login_email || "",
   });
 }
 
@@ -66,34 +66,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON invàlid" }, { status: 400 });
   }
 
-  const { email: rawEmail, key, value, spend, survey, loginEmail } = (body ?? {}) as {
+  // login_email NO és editable des de la web: es configura a la BD (l'instructor).
+  const { email: rawEmail, key, value, spend, survey } = (body ?? {}) as {
     email?: unknown;
     key?: unknown;
     value?: unknown;
     spend?: unknown;
     survey?: unknown;
-    loginEmail?: unknown;
   };
 
   const email = normalizeEmail(rawEmail);
   if (!email) {
     return NextResponse.json({ error: "email invàlid" }, { status: 400 });
-  }
-
-  // Correu per al login de Claude.
-  if (loginEmail !== undefined) {
-    const login = normalizeEmail(loginEmail);
-    if (!login) {
-      return NextResponse.json({ error: "login_email invàlid" }, { status: 400 });
-    }
-    await pool.query(
-      `INSERT INTO workshop.participants (email, login_email)
-       VALUES ($1, $2)
-       ON CONFLICT (email)
-       DO UPDATE SET login_email = EXCLUDED.login_email, updated_at = now()`,
-      [email, login]
-    );
-    return NextResponse.json({ ok: true, email, loginEmail: login });
   }
 
   // Desa les respostes de l'enquesta inicial i marca survey_done.
