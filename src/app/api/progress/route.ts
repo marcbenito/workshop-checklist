@@ -27,29 +27,31 @@ export async function GET(request: Request) {
   const surveyCols = SURVEY.map((q) => q.key).join(", ");
   const cols = COLUMNS.join(", ");
   const { rows } = await pool.query(
-    `SELECT ${cols}, spend_pct, survey_done, ${surveyCols}
+    `SELECT ${cols}, spend_pct, survey_done, login_email, ${surveyCols}
        FROM workshop.participants WHERE email = $1`,
     [email]
   );
 
   if (rows.length === 0) {
-    // Encara no existeix: tot a false i gasto a 0.
+    // Encara no existeix: tot a false, gasto 0 i login_email = email per defecte.
     const empty = Object.fromEntries(COLUMNS.map((c) => [c, false]));
     return NextResponse.json({
       email,
       steps: empty,
       spend: 0,
       surveyDone: false,
+      loginEmail: email,
     });
   }
 
-  const { spend_pct, survey_done, ...rest } = rows[0];
+  const { spend_pct, survey_done, login_email, ...rest } = rows[0];
   const steps = Object.fromEntries(COLUMNS.map((c) => [c, rest[c]]));
   return NextResponse.json({
     email,
     steps,
     spend: spend_pct ?? 0,
     surveyDone: survey_done ?? false,
+    loginEmail: login_email || email,
   });
 }
 
@@ -64,17 +66,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON invàlid" }, { status: 400 });
   }
 
-  const { email: rawEmail, key, value, spend, survey } = (body ?? {}) as {
+  const { email: rawEmail, key, value, spend, survey, loginEmail } = (body ?? {}) as {
     email?: unknown;
     key?: unknown;
     value?: unknown;
     spend?: unknown;
     survey?: unknown;
+    loginEmail?: unknown;
   };
 
   const email = normalizeEmail(rawEmail);
   if (!email) {
     return NextResponse.json({ error: "email invàlid" }, { status: 400 });
+  }
+
+  // Correu per al login de Claude.
+  if (loginEmail !== undefined) {
+    const login = normalizeEmail(loginEmail);
+    if (!login) {
+      return NextResponse.json({ error: "login_email invàlid" }, { status: 400 });
+    }
+    await pool.query(
+      `INSERT INTO workshop.participants (email, login_email)
+       VALUES ($1, $2)
+       ON CONFLICT (email)
+       DO UPDATE SET login_email = EXCLUDED.login_email, updated_at = now()`,
+      [email, login]
+    );
+    return NextResponse.json({ ok: true, email, loginEmail: login });
   }
 
   // Desa les respostes de l'enquesta inicial i marca survey_done.

@@ -16,6 +16,8 @@ export type Step = {
   href?: string;
   hrefLabel?: string;
   optional?: boolean;
+  /** Mostra un avís de fer login amb el correu de Claude. */
+  warnLogin?: boolean;
 };
 
 export const STEPS: Step[] = [
@@ -45,25 +47,27 @@ export const STEPS: Step[] = [
     hint: "Ha de mostrar un número de versió, p. ex. «2.1.x (Claude Code)».",
     href: "https://claude.com/product/claude-code",
     hrefLabel: "claude.com/product/claude-code",
+    warnLogin: true,
   },
   {
     key: "claude_code_login",
     title: "Claude Code (login)",
-    detail:
-      "Executa «claude» i inicia sessió. ⚠️ Fes servir EL MATEIX CORREU amb què t'has inscrit al curs.",
+    detail: "Executa «claude» i inicia sessió.",
     verify: "claude → /status",
-    hint: "«/status» mostra el teu compte, loguejat amb el correu de la inscripció.",
+    hint: "«/status» mostra el teu compte, loguejat amb el correu correcte.",
     href: "https://claude.com/product/claude-code",
     hrefLabel: "claude.com/product/claude-code",
+    warnLogin: true,
   },
   {
     key: "claude_desktop",
-    title: "Claude Desktop",
+    title: "Claude Desktop (claude.ai)",
     detail: "Mateix login. L'usarem per a Cowork i Claude Design (H5).",
     verify: "obre l'app i fes login",
     hint: "Un cop dins, veus el teu nom/avatar a baix a l'esquerra.",
     href: "https://claude.ai/download",
     hrefLabel: "claude.ai/download",
+    warnLogin: true,
   },
   {
     key: "github_cli",
