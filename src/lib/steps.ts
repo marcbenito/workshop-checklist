@@ -80,9 +80,9 @@ export const STEPS: Step[] = [
   },
   {
     key: "repo_clone",
-    title: "Fork + clone del repo del curs",
+    title: "Clone del repo del curs",
     detail:
-      "gh repo fork marcbenito/claude_workshop_ensenyament --clone → cd app → npm install → npm run dev",
+      "gh repo clone marcbenito/claude_workshop_ensenyament → cd app → npm install → npm run dev",
     verify: "npm run dev",
     hint: "Veus «Ready» i l'app respon a http://localhost:3000.",
     href: "https://github.com/marcbenito/claude_workshop_ensenyament",
