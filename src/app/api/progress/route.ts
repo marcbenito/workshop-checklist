@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { STEP_KEYS, STEPS } from "@/lib/steps";
+import { SURVEY, SURVEY_KEYS } from "@/lib/survey";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,20 +24,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "email invàlid" }, { status: 400 });
   }
 
+  const surveyCols = SURVEY.map((q) => q.key).join(", ");
   const cols = COLUMNS.join(", ");
   const { rows } = await pool.query(
-    `SELECT ${cols}, spend_pct FROM workshop.participants WHERE email = $1`,
+    `SELECT ${cols}, spend_pct, survey_done, ${surveyCols}
+       FROM workshop.participants WHERE email = $1`,
     [email]
   );
 
   if (rows.length === 0) {
     // Encara no existeix: tot a false i gasto a 0.
     const empty = Object.fromEntries(COLUMNS.map((c) => [c, false]));
-    return NextResponse.json({ email, steps: empty, spend: 0 });
+    return NextResponse.json({
+      email,
+      steps: empty,
+      spend: 0,
+      surveyDone: false,
+    });
   }
 
-  const { spend_pct, ...steps } = rows[0];
-  return NextResponse.json({ email, steps, spend: spend_pct ?? 0 });
+  const { spend_pct, survey_done, ...rest } = rows[0];
+  const steps = Object.fromEntries(COLUMNS.map((c) => [c, rest[c]]));
+  return NextResponse.json({
+    email,
+    steps,
+    spend: spend_pct ?? 0,
+    surveyDone: survey_done ?? false,
+  });
 }
 
 // POST /api/progress
@@ -50,16 +64,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON invàlid" }, { status: 400 });
   }
 
-  const { email: rawEmail, key, value, spend } = (body ?? {}) as {
+  const { email: rawEmail, key, value, spend, survey } = (body ?? {}) as {
     email?: unknown;
     key?: unknown;
     value?: unknown;
     spend?: unknown;
+    survey?: unknown;
   };
 
   const email = normalizeEmail(rawEmail);
   if (!email) {
     return NextResponse.json({ error: "email invàlid" }, { status: 400 });
+  }
+
+  // Desa les respostes de l'enquesta inicial i marca survey_done.
+  if (survey !== undefined) {
+    if (typeof survey !== "object" || survey === null) {
+      return NextResponse.json({ error: "survey invàlid" }, { status: 400 });
+    }
+    const entries = Object.entries(survey as Record<string, unknown>).filter(
+      ([k]) => SURVEY_KEYS.has(k)
+    );
+    // Columnes (validades per llista blanca) + valors parametritzats.
+    const cols = ["survey_done", ...entries.map(([k]) => k)];
+    const vals: (boolean)[] = [true, ...entries.map(([, v]) => Boolean(v))];
+    const insertCols = cols.map((c) => `"${c}"`).join(", ");
+    const placeholders = vals.map((_, i) => `$${i + 2}`).join(", ");
+    const updates = cols.map((c) => `"${c}" = EXCLUDED."${c}"`).join(", ");
+    await pool.query(
+      `INSERT INTO workshop.participants (email, ${insertCols})
+       VALUES ($1, ${placeholders})
+       ON CONFLICT (email)
+       DO UPDATE SET ${updates}, updated_at = now()`,
+      [email, ...vals]
+    );
+    return NextResponse.json({ ok: true, email, survey: true });
   }
 
   // Actualització del % de gasto.
