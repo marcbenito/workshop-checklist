@@ -25,20 +25,23 @@ export async function GET(request: Request) {
 
   const cols = COLUMNS.join(", ");
   const { rows } = await pool.query(
-    `SELECT ${cols} FROM workshop.participants WHERE email = $1`,
+    `SELECT ${cols}, spend_pct FROM workshop.participants WHERE email = $1`,
     [email]
   );
 
   if (rows.length === 0) {
-    // Encara no existeix: tot a false.
+    // Encara no existeix: tot a false i gasto a 0.
     const empty = Object.fromEntries(COLUMNS.map((c) => [c, false]));
-    return NextResponse.json({ email, steps: empty });
+    return NextResponse.json({ email, steps: empty, spend: 0 });
   }
 
-  return NextResponse.json({ email, steps: rows[0] });
+  const { spend_pct, ...steps } = rows[0];
+  return NextResponse.json({ email, steps, spend: spend_pct ?? 0 });
 }
 
-// POST /api/progress  { email, key, value }  → upsert d'un pas.
+// POST /api/progress
+//   { email, key, value }  → upsert d'un pas (booleà)
+//   { email, spend }       → upsert del % de gasto de la sessió (0–100)
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -47,16 +50,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "JSON invàlid" }, { status: 400 });
   }
 
-  const { email: rawEmail, key, value } = (body ?? {}) as {
+  const { email: rawEmail, key, value, spend } = (body ?? {}) as {
     email?: unknown;
     key?: unknown;
     value?: unknown;
+    spend?: unknown;
   };
 
   const email = normalizeEmail(rawEmail);
   if (!email) {
     return NextResponse.json({ error: "email invàlid" }, { status: 400 });
   }
+
+  // Actualització del % de gasto.
+  if (spend !== undefined) {
+    const n = Number(spend);
+    if (!Number.isFinite(n)) {
+      return NextResponse.json({ error: "spend invàlid" }, { status: 400 });
+    }
+    const pct = Math.max(0, Math.min(100, Math.round(n)));
+    await pool.query(
+      `INSERT INTO workshop.participants (email, spend_pct)
+       VALUES ($1, $2)
+       ON CONFLICT (email)
+       DO UPDATE SET spend_pct = EXCLUDED.spend_pct, updated_at = now()`,
+      [email, pct]
+    );
+    return NextResponse.json({ ok: true, email, spend: pct });
+  }
+
+  // Actualització d'un pas booleà.
   if (typeof key !== "string" || !STEP_KEYS.has(key)) {
     return NextResponse.json({ error: "pas desconegut" }, { status: 400 });
   }

@@ -102,22 +102,6 @@ export const STEPS: Step[] = [
     href: "https://claude.ai/chrome",
     hrefLabel: "claude.ai/chrome",
   },
-  {
-    key: "env_mcp",
-    title: "`.env` i `.mcp.json` verificats",
-    detail:
-      "Comprova que el repo clonat ja porta `.env` (amb DATABASE_URL) i `.mcp.json`. No cal configurar res.",
-    verify: "ls .env .mcp.json",
-    hint: "Ha de llistar els dos fitxers (no «No such file or directory»).",
-  },
-  {
-    key: "openspec",
-    title: "OpenSpec (opcional)",
-    detail: "npm i -g openspec — per a la demo final.",
-    verify: "openspec --version",
-    hint: "Ha de mostrar un número de versió.",
-    optional: true,
-  },
 ];
 
 /** Conjunt de claus vàlides per validar noms de columna a l'API. */
