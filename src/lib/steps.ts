@@ -3,13 +3,35 @@
 // `workshop.participants` a Postgres. Aquesta llista fa de llista blanca per
 // validar el nom de columna a l'API (evita SQL injection al nom de columna).
 
+export type Section = "essencials" | "superdev";
+
+export const SECTIONS: { id: Section; label: string; subtitle: string }[] = [
+  {
+    id: "essencials",
+    label: "Parts essencials",
+    subtitle: "El mínim per treballar durant el taller.",
+  },
+  {
+    id: "superdev",
+    label: "SuperDev",
+    subtitle: "Per treure-li tot el suc (ho farem servir a la tarda).",
+  },
+];
+
 export type Step = {
   key: string;
+  section: Section;
   title: string;
   /** Instrucció / detall del pas. */
   detail: string;
-  /** Comanda per validar que la instal·lació és correcta. */
+  /** Comanda o acció per validar que la instal·lació és correcta. */
   verify?: string;
+  /** Etiqueta del bloc de verificació (p. ex. «Executa a la terminal»). */
+  verifyLabel?: string;
+  /** Procediment pas a pas (per a verificacions que no són una sola comanda). */
+  verifySteps?: string[];
+  /** Renderitza els verifySteps com a comandes (monospace). */
+  verifyStepsMono?: boolean;
   /** Pista: què has de veure si tot ha anat bé. */
   hint?: string;
   /** Enllaç de descàrrega / documentació. */
@@ -21,8 +43,10 @@ export type Step = {
 };
 
 export const STEPS: Step[] = [
+  // ---- Parts essencials ----
   {
     key: "git",
+    section: "essencials",
     title: "git",
     detail: "Control de versions.",
     verify: "git -v",
@@ -32,6 +56,7 @@ export const STEPS: Step[] = [
   },
   {
     key: "node",
+    section: "essencials",
     title: "Node.js 20+",
     detail: "Instal·la la versió LTS (20 o superior).",
     verify: "node -v",
@@ -41,6 +66,7 @@ export const STEPS: Step[] = [
   },
   {
     key: "claude_code",
+    section: "essencials",
     title: "Claude Code (instal·lació)",
     detail: "npm i -g @anthropic-ai/claude-code · necessites compte de Claude (Pro o Max).",
     verify: "claude --version",
@@ -51,60 +77,74 @@ export const STEPS: Step[] = [
   },
   {
     key: "claude_code_login",
+    section: "essencials",
     title: "Claude Code (login)",
-    detail: "Executa «claude» i inicia sessió.",
-    verify: "claude → /status",
-    hint: "«/status» mostra el teu compte, loguejat amb el correu correcte.",
+    detail: "Inicia sessió a Claude Code amb el correu @icmb.es que et surt a dalt.",
+    verify: "claude",
+    verifyLabel: "Executa a la terminal",
+    verifySteps: [
+      "Fes el login amb el correu @icmb.es de dalt (NO el teu correu personal).",
+      "Rebràs un primer correu (triga ~1 minut): obre'l, et demanarà fer login.",
+      "Un cop poses el correu @icmb.es, rebràs un SEGON correu amb el CODI.",
+      "Copia aquest codi i enganxa'l a Claude Code.",
+      "Si no veus el correu, obre una finestra d'incògnit del navegador.",
+    ],
+    hint: "«/status» ha de mostrar el teu compte loguejat amb el correu @icmb.es.",
     href: "https://claude.com/product/claude-code",
     hrefLabel: "claude.com/product/claude-code",
     warnLogin: true,
   },
   {
+    key: "repo_clone",
+    section: "essencials",
+    title: "Clone del repo del curs",
+    detail: "Clona el repo del curs i arrenca l'app en local.",
+    verifyLabel: "Executa a la terminal, una comanda rere l'altra",
+    verifySteps: [
+      "git clone https://github.com/marcbenito/claude_workshop_ensenyament.git",
+      "cd claude_workshop_ensenyament",
+      "cd app",
+      "npm i",
+      "npm run dev",
+    ],
+    verifyStepsMono: true,
+    hint: "Després de «npm run dev» veus «Ready» i l'app respon a http://localhost:3000.",
+    href: "https://github.com/marcbenito/claude_workshop_ensenyament",
+    hrefLabel: "github.com/marcbenito/claude_workshop_ensenyament",
+  },
+  // ---- SuperDev ----
+  {
     key: "claude_desktop",
+    section: "superdev",
     title: "Claude Desktop (claude.ai)",
     detail: "Mateix login. L'usarem per a Cowork i Claude Design (H5).",
-    verify: "obre l'app i fes login",
+    verify: "Obre l'app i fes login",
+    verifyLabel: "Acció",
     hint: "Un cop dins, veus el teu nom/avatar a baix a l'esquerra.",
     href: "https://claude.ai/download",
     hrefLabel: "claude.ai/download",
     warnLogin: true,
   },
   {
+    key: "chrome_ext",
+    section: "superdev",
+    title: "Claude in Chrome (extensió)",
+    detail: "L'extensió Claude in Chrome (alternativa: chrome-devtools-mcp via npx).",
+    verify: "chrome://extensions",
+    verifyLabel: "Obre al navegador",
+    hint: "La icona de Claude apareix a la barra d'extensions de Chrome.",
+    href: "https://claude.ai/chrome",
+    hrefLabel: "claude.ai/chrome",
+  },
+  {
     key: "github_cli",
+    section: "superdev",
     title: "GitHub CLI",
     detail: "Autentica't amb «gh auth login».",
     verify: "gh auth status",
     hint: "Ha de dir «Logged in to github.com account …» amb el teu usuari.",
     href: "https://cli.github.com",
     hrefLabel: "cli.github.com",
-  },
-  {
-    key: "repo_clone",
-    title: "Clone del repo del curs",
-    detail:
-      "gh repo clone marcbenito/claude_workshop_ensenyament → cd app → npm install → npm run dev",
-    verify: "npm run dev",
-    hint: "Veus «Ready» i l'app respon a http://localhost:3000.",
-    href: "https://github.com/marcbenito/claude_workshop_ensenyament",
-    hrefLabel: "github.com/marcbenito/claude_workshop_ensenyament",
-  },
-  {
-    key: "chrome",
-    title: "Google Chrome",
-    detail: "El navegador Chrome instal·lat. Per a l'H3 (MCP del navegador).",
-    verify: "obre chrome://version",
-    hint: "Chrome obre i mostra la seva versió.",
-    href: "https://www.google.com/chrome/",
-    hrefLabel: "google.com/chrome",
-  },
-  {
-    key: "chrome_ext",
-    title: "Claude in Chrome (extensió)",
-    detail: "L'extensió Claude in Chrome (alternativa: chrome-devtools-mcp via npx).",
-    verify: "obre chrome://extensions",
-    hint: "La icona de Claude apareix a la barra d'extensions de Chrome.",
-    href: "https://claude.ai/chrome",
-    hrefLabel: "claude.ai/chrome",
   },
 ];
 

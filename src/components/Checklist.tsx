@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { STEPS } from "@/lib/steps";
+import { STEPS, SECTIONS, type Step } from "@/lib/steps";
 
 type StepsState = Record<string, boolean>;
 
@@ -148,78 +148,143 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
 
           <LoginEmailCard value={loginEmail} />
 
-          <ul className="space-y-3">
-          {STEPS.map((step) => {
-            const checked = !!state[step.key];
+          {SECTIONS.map((sec) => {
+            const secSteps = STEPS.filter((s) => s.section === sec.id);
+            const secDone = secSteps.filter((s) => state[s.key]).length;
             return (
-              <li
-                key={step.key}
-                className={`rounded-xl border p-4 transition ${
-                  checked
-                    ? "border-[#C15F3C]/40 bg-[#C15F3C]/5"
-                    : "border-neutral-200 dark:border-neutral-800"
-                }`}
-              >
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(step.key)}
-                    className="mt-1 h-5 w-5 shrink-0 accent-[#C15F3C]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{step.title}</span>
-                      {step.optional && (
-                        <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                          opcional
-                        </span>
-                      )}
-                      {saving === step.key && (
-                        <span className="text-xs text-neutral-400">desant…</span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                      {step.detail}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                      {step.verify && (
-                        <code className="rounded bg-neutral-100 px-2 py-0.5 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                          {step.verify}
-                        </code>
-                      )}
-                      {step.href && (
-                        <a
-                          href={step.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[#C15F3C] underline underline-offset-2"
-                        >
-                          {step.hrefLabel ?? "obre"} ↗
-                        </a>
-                      )}
-                    </div>
-                    {step.hint && (
-                      <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
-                        ✅ {step.hint}
-                      </p>
-                    )}
-                    {step.warnLogin && (
-                      <p className="mt-2 rounded-md bg-amber-100 px-2 py-1.5 text-xs font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                        ⚠️ Fes login amb aquest correu:{" "}
-                        <strong>{loginEmail || "no configurat"}</strong>
-                      </p>
-                    )}
-                  </div>
-                </label>
-              </li>
+              <section key={sec.id} className="mb-8">
+                <div className="mb-1 flex items-baseline justify-between gap-3">
+                  <h2 className="text-lg font-bold tracking-tight">{sec.label}</h2>
+                  <span className="text-sm tabular-nums text-neutral-500">
+                    {secDone}/{secSteps.length}
+                  </span>
+                </div>
+                <p className="mb-3 text-sm text-neutral-500">{sec.subtitle}</p>
+                <ul className="space-y-3">
+                  {secSteps.map((step) => (
+                    <StepItem
+                      key={step.key}
+                      step={step}
+                      checked={!!state[step.key]}
+                      saving={saving === step.key}
+                      loginEmail={loginEmail}
+                      onToggle={() => toggle(step.key)}
+                    />
+                  ))}
+                </ul>
+              </section>
             );
           })}
-          </ul>
         </>
       )}
     </div>
+  );
+}
+
+function StepItem({
+  step,
+  checked,
+  saving,
+  loginEmail,
+  onToggle,
+}: {
+  step: Step;
+  checked: boolean;
+  saving: boolean;
+  loginEmail: string;
+  onToggle: () => void;
+}) {
+  return (
+    <li
+      className={`rounded-xl border p-4 transition ${
+        checked
+          ? "border-[#C15F3C]/40 bg-[#C15F3C]/5"
+          : "border-neutral-200 dark:border-neutral-800"
+      }`}
+    >
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          className="mt-1 h-5 w-5 shrink-0 accent-[#C15F3C]"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{step.title}</span>
+            {step.optional && (
+              <span className="rounded bg-neutral-200 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                opcional
+              </span>
+            )}
+            {saving && <span className="text-xs text-neutral-400">desant…</span>}
+          </div>
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            {step.detail}
+          </p>
+          {step.href && (
+            <a
+              href={step.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-2 inline-block text-sm text-[#C15F3C] underline underline-offset-2"
+            >
+              {step.hrefLabel ?? "obre"} ↗
+            </a>
+          )}
+
+          {(step.verify || step.verifySteps || step.hint) && (
+            <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#C15F3C]">
+                Verificació
+              </p>
+              {step.verify && (
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-300">
+                  {step.verifyLabel ?? "Executa a la terminal"}:{" "}
+                  <code className="rounded bg-white px-1.5 py-0.5 text-[#C15F3C] dark:bg-neutral-800">
+                    {step.verify}
+                  </code>
+                </p>
+              )}
+              {step.verifySteps && (
+                <>
+                  {step.verifyLabel && !step.verify && (
+                    <p className="mt-1 text-xs font-medium text-neutral-500">
+                      {step.verifyLabel}:
+                    </p>
+                  )}
+                  <ol className="mt-1.5 list-decimal space-y-1 pl-5 text-sm text-neutral-700 dark:text-neutral-300">
+                    {step.verifySteps.map((s, i) => (
+                      <li key={i}>
+                        {step.verifyStepsMono ? (
+                          <code className="rounded bg-white px-1.5 py-0.5 text-[#C15F3C] dark:bg-neutral-800">
+                            {s}
+                          </code>
+                        ) : (
+                          s
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
+              {step.hint && (
+                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  ✅ Has de veure: {step.hint}
+                </p>
+              )}
+            </div>
+          )}
+          {step.warnLogin && (
+            <p className="mt-2 rounded-md bg-amber-100 px-2 py-1.5 text-xs font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+              ⚠️ Fes login amb aquest correu:{" "}
+              <strong>{loginEmail || "no configurat"}</strong>
+            </p>
+          )}
+        </div>
+      </label>
+    </li>
   );
 }
 
