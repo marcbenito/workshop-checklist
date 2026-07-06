@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   const surveyCols = SURVEY.map((q) => q.key).join(", ");
   const cols = COLUMNS.join(", ");
   const { rows } = await pool.query(
-    `SELECT ${cols}, spend_pct, survey_done, login_email, ${surveyCols}
+    `SELECT ${cols}, spend_pct, survey_done, login_email, name, ${surveyCols}
        FROM workshop.participants WHERE email = $1`,
     [email]
   );
@@ -41,10 +41,11 @@ export async function GET(request: Request) {
       spend: 0,
       surveyDone: false,
       loginEmail: "",
+      name: "",
     });
   }
 
-  const { spend_pct, survey_done, login_email, ...rest } = rows[0];
+  const { spend_pct, survey_done, login_email, name, ...rest } = rows[0];
   const steps = Object.fromEntries(COLUMNS.map((c) => [c, rest[c]]));
   return NextResponse.json({
     email,
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
     spend: spend_pct ?? 0,
     surveyDone: survey_done ?? false,
     loginEmail: login_email || "",
+    name: name || "",
   });
 }
 

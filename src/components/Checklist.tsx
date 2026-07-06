@@ -9,6 +9,7 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
   const [state, setState] = useState<StepsState>({});
   const [spend, setSpend] = useState<number>(0);
   const [loginEmail, setLoginEmail] = useState<string>("");
+  const [name, setName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
           if (data.steps) setState(data.steps);
           if (typeof data.spend === "number") setSpend(data.spend);
           setLoginEmail(data.loginEmail ?? "");
+          setName(data.name ?? "");
         }
       } catch {
         if (active) setError("No s'ha pogut carregar el teu progrés.");
@@ -101,7 +103,12 @@ export function Checklist({ email, onReset }: { email: string; onReset: () => vo
             canvia d&apos;email
           </button>
         </div>
-        <p className="mt-1 text-sm text-neutral-500">{email}</p>
+        {name && (
+          <p className="mt-1 text-base font-medium">
+            Hola, {name.includes(",") ? name.split(",")[1].trim() : name} 👋
+          </p>
+        )}
+        <p className="mt-0.5 text-sm text-neutral-500">{email}</p>
 
         {!allDone && (
           <div className="mt-4">
